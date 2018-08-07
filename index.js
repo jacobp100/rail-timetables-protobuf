@@ -1,5 +1,7 @@
 const fs = require("fs");
 
+const encodeTime = (h, m) => h * 60 + m;
+
 async function* chunksToLines(chunksAsync) {
   let previous = "";
   for await (const chunk of chunksAsync) {
@@ -20,16 +22,25 @@ async function* chunksToLines(chunksAsync) {
 async function* getStations(dataStream) {
   let i = 0;
   const stations = {};
+  const tlaMap = {};
 
   for await (const line of chunksToLines(dataStream)) {
     if (line[0] === "A") {
-      const toploc = line.slice(36, 43).trimRight();
       const tla = line.slice(43, 46);
-      const id = i;
+      const toploc = line.slice(36, 43).trimRight();
+      const existing = tlaMap[tla];
 
-      stations[toploc] = { tla, id };
+      if (existing != null) {
+        stations[toploc] = existing;
+      } else {
+        const id = i;
 
-      i += 1;
+        const station = { tla, id };
+        stations[toploc] = station;
+        tlaMap[tla] = station;
+
+        i += 1;
+      }
     }
   }
 
@@ -39,7 +50,7 @@ async function* getStations(dataStream) {
 const createRoute = line => ({
   stops: [],
   id: line.slice(3, 10),
-  days: Array.from(line.slice(21, 28), Number),
+  days: parseInt(line.slice(21, 28), 2),
   from: line.slice(9, 15),
   to: line.slice(15, 21)
 });
@@ -55,13 +66,22 @@ const createStop = (stations, line) => {
   switch (line[1]) {
     case "O":
     case "T":
-      arrival = Number(line.slice(15, 17)) * 60 + Number(line.slice(17, 19));
+      arrival = encodeTime(
+        Number(line.slice(15, 17)),
+        Number(line.slice(17, 19))
+      );
       departure = arrival;
       platform = line.slice(19, 22).trimRight();
       break;
     case "I":
-      arrival = Number(line.slice(25, 27)) * 60 + Number(line.slice(27, 29));
-      departure = Number(line.slice(29, 31)) * 60 + Number(line.slice(31, 33));
+      arrival = encodeTime(
+        Number(line.slice(25, 27)),
+        Number(line.slice(27, 29))
+      );
+      departure = encodeTime(
+        Number(line.slice(29, 31)),
+        Number(line.slice(31, 33))
+      );
       platform = line.slice(33, 36).trimRight();
       break;
     default:
@@ -70,7 +90,7 @@ const createStop = (stations, line) => {
 
   return { id, platform, arrival, departure };
 };
-const scheduleRe = /^BS/;
+const scheduleRe = /^BSN/;
 const scheduleDataRe = /^BX/;
 const pointRe = /^L[OIT]/;
 const originRe = /^LO/;
@@ -102,7 +122,7 @@ async function* getSchedule(stations, dataStream) {
 
 async function* run() {
   const { value: stations } = await getStations(
-    fs.createReadStream("/Users/jacob/Downloads/ttis989/ttisf989.msn", {
+    fs.createReadStream("/home/jacob/Downloads/ttis989/ttisf989.msn", {
       encoding: "utf-8"
     })
   ).next();
@@ -110,23 +130,29 @@ async function* run() {
   const routes = [];
   const schedule = getSchedule(
     stations,
-    fs.createReadStream("/Users/jacob/Downloads/ttis989/ttisf989.mca", {
+    fs.createReadStream("/home/jacob/Downloads/ttis989/ttisf989.mca", {
       encoding: "utf-8"
     })
   );
 
-  let size = 0;
+  let numStops = 0;
+  let maxRouteStops = 0;
+  const stationsSet = new Set();
   const platformsSet = new Set();
 
   for await (const route of schedule) {
     routes.push(route);
-    size += 1 + route.stops.length;
-    for (const { platform, arrival, departure } of route.stops) {
+    numStops += route.stops.length;
+    maxRouteStops = Math.max(maxRouteStops, route.stops.length);
+    for (const { id, platform, arrival, departure } of route.stops) {
+      stationsSet.add(id);
       platformsSet.add(platform);
     }
   }
 
   const platforms = Array.from(platformsSet);
+  const numRoutes = routes.length;
+  const size = numRoutes + numStops;
   const data = new Uint32Array(size * 2);
 
   let i = 0;
@@ -148,26 +174,59 @@ async function* run() {
     }
   }
 
-  console.log(size);
+  console.log({ numRoutes, numStops, size, maxRouteStops });
   console.log(platforms.length);
   console.log(Object.keys(stations).length);
+  console.log(stationsSet.size);
   // console.log(JSON.stringify({ stations, routes }).length)
   // fs.writeFileSync(
-  //   '/Users/jacob/Downloads/ttis989/ttisf989.json',
+  //   '/home/jacob/Downloads/ttis989/ttisf989.json',
   //   JSON.stringify({ stations, routes })
   // );
   fs.writeFileSync(
-    "/Users/jacob/Downloads/ttis989/ttisf989.ui32",
+    "/home/jacob/Downloads/ttis989/ttisf989.ui32",
     new Uint8Array(data.buffer)
   );
+
+  const SUR = Object.values(stations).find(s => s.tla === "SUR").id;
+  const WAT = stations.WATRLMN.id;
+
+  console.time("ROUTE");
+  const surWatOnMon = routes.filter(({ days, stops }) => {
+    if ((days & (1 << 6)) === 0) return false;
+
+    let i = 0;
+    for (; i < stops.length; i += 1) {
+      const { id } = stops[i];
+      if (id === WAT) {
+        return false;
+      } else if (id === SUR) {
+        break;
+      }
+    }
+
+    for (; i < stops.length; i += 1) {
+      const { id } = stops[i];
+      if (id === WAT) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+  console.timeEnd("ROUTE");
+
+  // console.log(surWatOnMon.map(r => r.stops.map(s => sIds[s.id])));
+  // console.log(surWatOnMon.length);
 }
 
 /*
 ROUTE
 a (7) - days
-d (22) - id
-b (16) - from
-c (16) - to
+b (22) - id
+c (16) - from
+d (16) - to
+e (7) - numStops
 
 STOP
 a (12) - station id
