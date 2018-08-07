@@ -155,10 +155,16 @@ async function* run() {
   const size = numRoutes + numStops;
   const data = new Uint32Array(size * 2);
 
+  const idMap = Object.values(stations).reduce((accum, { id, tla }) => {
+    accum[id] = tla;
+    return accum;
+  }, {});
+
   let i = 0;
-  for (route of routes) {
+  for ({ days, stops } of routes) {
+    data[i] = (0 << 31) | (days << 24) | ((stops.length & 0b1111111) << 17);
     i += 2;
-    for (const { id, platform, arrival, departure } of route.stops) {
+    for (const { id, platform, arrival, departure } of stops) {
       const platformIndex = platforms.indexOf(platform);
       const d1 =
         (1 << 31) |
@@ -169,7 +175,7 @@ async function* run() {
         ((arrival & 0b11111111111) << 20) |
         ((departure & 0b11111111111) << 9);
       data[i] = d1;
-      data[i + 1] = d2;
+      data[i + 1] = id; // d2;
       i += 2;
     }
   }
@@ -188,8 +194,57 @@ async function* run() {
     new Uint8Array(data.buffer)
   );
 
+  const ids = Object.values(stations).map(s => s.id);
+
   const SUR = Object.values(stations).find(s => s.tla === "SUR").id;
-  const WAT = stations.WATRLMN.id;
+  const CLJ = Object.values(stations).find(s => s.tla === "CLJ").id;
+  const WAT = CLJ; // stations.WATRLMN.id;
+
+  console.time("ROUTE FAST");
+  const DAY = (1 << 6) << 24;
+  const foundRoutes = [];
+  for (let i = 0; i < data.length; i += 2) {
+    if ((data[i] & (1 << 31)) !== 0) {
+      throw new Error("Invalid state");
+    }
+
+    const startIndex = i;
+    const nextIndex = i + ((data[i] >> 17) & 0b1111111) * 2;
+    if ((data[i] & DAY) === 0) {
+      i += 2;
+      for (; i < nextIndex; i += 2) {
+        if ((data[i] & (1 << 31)) === 0) {
+          throw new Error("Invalid state");
+        }
+
+        // const from = (data[i] >> 18) & 0b111111111111;
+        const from = data[i + 1];
+        if (from === WAT) {
+          i = nextIndex;
+          break;
+        } else if (from === SUR) {
+          i += 2;
+          for (; i < nextIndex; i += 2) {
+            if ((data[i] & (1 << 31)) === 0) {
+              throw new Error("Invalid state");
+            }
+
+            // const to = (data[i] >> 18) & 0b111111111111;
+            const to = data[i + 1];
+            if (to === WAT) {
+              foundRoutes.push(startIndex);
+              i = nextIndex;
+              break;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    i = nextIndex;
+  }
+  console.timeEnd("ROUTE FAST");
 
   console.time("ROUTE");
   const surWatOnMon = routes.filter(({ days, stops }) => {
@@ -205,6 +260,7 @@ async function* run() {
       }
     }
 
+    i += 1;
     for (; i < stops.length; i += 1) {
       const { id } = stops[i];
       if (id === WAT) {
@@ -217,7 +273,8 @@ async function* run() {
   console.timeEnd("ROUTE");
 
   // console.log(surWatOnMon.map(r => r.stops.map(s => sIds[s.id])));
-  // console.log(surWatOnMon.length);
+  console.log(foundRoutes.length);
+  console.log(surWatOnMon.length);
 }
 
 /*
