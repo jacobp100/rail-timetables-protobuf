@@ -210,7 +210,7 @@ async function* run() {
 
     const startIndex = i;
     const nextIndex = i + ((data[i] >> 17) & 0b1111111) * 2;
-    if ((data[i] & DAY) === 0) {
+    if ((data[i] & DAY) !== 0) {
       i += 2;
       for (; i < nextIndex; i += 2) {
         if ((data[i] & (1 << 31)) === 0) {
