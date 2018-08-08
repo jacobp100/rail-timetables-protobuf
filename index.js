@@ -1,4 +1,6 @@
+const path = require("path");
 const fs = require("fs");
+const os = require("os");
 
 const encodeTime = (h, m) => h * 60 + m;
 
@@ -122,17 +124,19 @@ async function* getSchedule(stations, dataStream) {
 
 async function* run() {
   const { value: stations } = await getStations(
-    fs.createReadStream("/home/jacob/Downloads/ttis989/ttisf989.msn", {
-      encoding: "utf-8"
-    })
+    fs.createReadStream(
+      path.join(os.homedir(), "Downloads/ttis989/ttisf989.msn"),
+      { encoding: "utf-8" }
+    )
   ).next();
 
   const routes = [];
   const schedule = getSchedule(
     stations,
-    fs.createReadStream("/home/jacob/Downloads/ttis989/ttisf989.mca", {
-      encoding: "utf-8"
-    })
+    fs.createReadStream(
+      path.join(os.homedir(), "Downloads/ttis989/ttisf989.mca"),
+      { encoding: "utf-8" }
+    )
   );
 
   let numStops = 0;
@@ -160,23 +164,27 @@ async function* run() {
     return accum;
   }, {});
 
-  let i = 0;
-  for ({ days, stops } of routes) {
-    data[i] = (0 << 31) | (days << 24) | ((stops.length & 0b1111111) << 17);
-    i += 2;
-    for (const { id, platform, arrival, departure } of stops) {
-      const platformIndex = platforms.indexOf(platform);
-      const d1 =
-        (1 << 31) |
-        ((id & 0b111111111111) << 18) |
-        ((platformIndex & 0b11111111) << 10);
-      const d2 =
-        (0 << 31) |
-        ((arrival & 0b11111111111) << 20) |
-        ((departure & 0b11111111111) << 9);
-      data[i] = d1;
-      data[i + 1] = id; // d2;
+  {
+    let i = 0;
+    for ({ days, stops } of routes) {
+      if (data[i] !== 0) throw new Error("Invalid state");
+      data[i] = (0 << 31) | (days << 24) | ((stops.length & 0b1111111) << 17);
       i += 2;
+      for (const { id, platform, arrival, departure } of stops) {
+        if (data[i] !== 0) throw new Error("Invalid state");
+        const platformIndex = platforms.indexOf(platform);
+        const d1 =
+          (1 << 31) |
+          ((id & 0b111111111111) << 18) |
+          ((platformIndex & 0b11111111) << 10);
+        const d2 =
+          (0 << 31) |
+          ((arrival & 0b11111111111) << 20) |
+          ((departure & 0b11111111111) << 9);
+        data[i] = d1;
+        data[i + 1] = id; // d2;
+        i += 2;
+      }
     }
   }
 
@@ -190,7 +198,7 @@ async function* run() {
   //   JSON.stringify({ stations, routes })
   // );
   fs.writeFileSync(
-    "/home/jacob/Downloads/ttis989/ttisf989.ui32",
+    path.join(os.homedir(), "Downloads/ttis989/ttisf989.ui32"),
     new Uint8Array(data.buffer)
   );
 
@@ -198,51 +206,42 @@ async function* run() {
 
   const SUR = Object.values(stations).find(s => s.tla === "SUR").id;
   const CLJ = Object.values(stations).find(s => s.tla === "CLJ").id;
-  const WAT = CLJ; // stations.WATRLMN.id;
+  const WAT = stations.WATRLMN.id;
+  console.log({ WAT });
 
   console.time("ROUTE FAST");
-  const DAY = (1 << 6) << 24;
   const foundRoutes = [];
-  for (let i = 0; i < data.length; i += 2) {
-    if ((data[i] & (1 << 31)) !== 0) {
-      throw new Error("Invalid state");
-    }
+  {
+    const DAY = (1 << 6) << 24;
+    let i = 0;
+    while (i < data.length) {
+      const startIndex = i;
+      const nextIndex = i + (((data[i] >> 17) & 0b1111111) + 1) * 2;
 
-    const startIndex = i;
-    const nextIndex = i + ((data[i] >> 17) & 0b1111111) * 2;
-    if ((data[i] & DAY) !== 0) {
-      i += 2;
-      for (; i < nextIndex; i += 2) {
-        if ((data[i] & (1 << 31)) === 0) {
-          throw new Error("Invalid state");
-        }
-
-        // const from = (data[i] >> 18) & 0b111111111111;
-        const from = data[i + 1];
-        if (from === WAT) {
-          i = nextIndex;
-          break;
-        } else if (from === SUR) {
-          i += 2;
-          for (; i < nextIndex; i += 2) {
-            if ((data[i] & (1 << 31)) === 0) {
-              throw new Error("Invalid state");
+      if ((data[i] & DAY) !== 0) {
+        i += 2;
+        for (; i < nextIndex; i += 2) {
+          // const from = (data[i] >> 18) & 0b111111111111;
+          const from = data[i + 1];
+          if (from === WAT) {
+            break;
+          } else if (from === SUR) {
+            i += 2;
+            for (; i < nextIndex; i += 2) {
+              // const to = (data[i] >> 18) & 0b111111111111;
+              const to = data[i + 1];
+              if (to === WAT) {
+                foundRoutes.push(startIndex);
+                break;
+              }
             }
-
-            // const to = (data[i] >> 18) & 0b111111111111;
-            const to = data[i + 1];
-            if (to === WAT) {
-              foundRoutes.push(startIndex);
-              i = nextIndex;
-              break;
-            }
+            break;
           }
-          break;
         }
       }
-    }
 
-    i = nextIndex;
+      i = nextIndex;
+    }
   }
   console.timeEnd("ROUTE FAST");
 
