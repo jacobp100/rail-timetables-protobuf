@@ -49,13 +49,22 @@ async function* getStations(dataStream) {
   return stations;
 }
 
-const createRoute = line => ({
-  stops: [],
-  id: line.slice(3, 10),
-  days: parseInt(line.slice(21, 28), 2),
-  from: line.slice(9, 15),
-  to: line.slice(15, 21)
-});
+const createRoute = line => {
+  const from = line.slice(9, 15);
+  const to = line.slice(15, 21);
+
+  // if (Number(to) - Number(from) <= 7) {
+  //   return null;
+  // }
+
+  return {
+    stops: [],
+    id: line.slice(3, 10),
+    days: parseInt(line.slice(21, 28), 2),
+    from,
+    to
+  };
+};
 const createStop = (stations, line) => {
   const station = stations[line.slice(2, 9).trimRight()];
   if (station == null) return null;
@@ -93,6 +102,7 @@ const createStop = (stations, line) => {
   return { id, platform, arrival, departure };
 };
 const scheduleRe = /^BSN/;
+const scheduleChangedRe = /^BS[DR]/;
 const scheduleDataRe = /^BX/;
 const pointRe = /^L[OIT]/;
 const originRe = /^LO/;
@@ -102,7 +112,11 @@ const terminateRe = /^LT/;
 async function* getSchedule(stations, dataStream) {
   let currentRoute = null;
 
+  let changed = 0;
   for await (const line of chunksToLines(dataStream)) {
+    if (scheduleRe.test(scheduleChangedRe)) {
+      changed += 1;
+    }
     if (scheduleRe.test(line)) {
       currentRoute = createRoute(line);
     } else if (scheduleDataRe.test(line)) {
@@ -119,6 +133,12 @@ async function* getSchedule(stations, dataStream) {
     } else {
       currentRoute = null;
     }
+  }
+
+  if (changed !== 0) {
+    throw new Error(
+      "Expected all schedules to be new (no deletions or revisions)"
+    );
   }
 }
 
@@ -143,11 +163,14 @@ async function* run() {
   let maxRouteStops = 0;
   const stationsSet = new Set();
   const platformsSet = new Set();
+  const fromTo = {};
 
   for await (const route of schedule) {
     routes.push(route);
     numStops += route.stops.length;
     maxRouteStops = Math.max(maxRouteStops, route.stops.length);
+    const key = `${route.from}:${route.to}`;
+    fromTo[key] = (fromTo[key] || 0) + 1;
     for (const { id, platform, arrival, departure } of route.stops) {
       stationsSet.add(id);
       platformsSet.add(platform);
@@ -182,13 +205,14 @@ async function* run() {
           ((arrival & 0b11111111111) << 20) |
           ((departure & 0b11111111111) << 9);
         data[i] = d1;
-        data[i + 1] = id; // d2;
+        data[i + 1] = d2;
         i += 2;
       }
     }
   }
 
   console.log({ numRoutes, numStops, size, maxRouteStops });
+  // console.log(fromTo);
   console.log(platforms.length);
   console.log(Object.keys(stations).length);
   console.log(stationsSet.size);
@@ -221,15 +245,13 @@ async function* run() {
       if ((data[i] & DAY) !== 0) {
         i += 2;
         for (; i < nextIndex; i += 2) {
-          // const from = (data[i] >> 18) & 0b111111111111;
-          const from = data[i + 1];
+          const from = (data[i] >> 18) & 0b111111111111;
           if (from === WAT) {
             break;
           } else if (from === SUR) {
             i += 2;
             for (; i < nextIndex; i += 2) {
-              // const to = (data[i] >> 18) & 0b111111111111;
-              const to = data[i + 1];
+              const to = (data[i] >> 18) & 0b111111111111;
               if (to === WAT) {
                 foundRoutes.push(startIndex);
                 break;
@@ -280,8 +302,8 @@ async function* run() {
 ROUTE
 a (7) - days
 b (22) - id
-c (16) - from
-d (16) - to
+c (11) - from
+d (11) - to
 e (7) - numStops
 
 STOP
