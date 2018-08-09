@@ -290,13 +290,15 @@ async function* run() {
       const startIndex = i;
       const nextIndex = i + (((data[i] >> 23) & 0b1111111) + 1) * 2;
 
-      const routeId = (data[i] >>> 0) & 0b1111111111111111111111;
+      const routeId = (data[i] >>> 1) & 0b1111111111111111111111;
       const from = (data[i + 1] >>> 20) & 0b11111111111;
       const to = (data[i + 1] >>> 9) & 0b11111111111;
       const days = (data[i + 1] >>> 2) & 0b1111111;
 
       if ((days & DAY) !== 0 && TODAY >= from && TODAY <= to) {
+        fastRoutes.delete(routeId);
         i += 2;
+
         for (; i < nextIndex; i += 2) {
           const fromId = (data[i] >>> 18) & 0b111111111111;
           if (fromId === POINTB) {
@@ -321,34 +323,20 @@ async function* run() {
   console.timeEnd("ROUTE FAST");
 
   console.time("ROUTE");
-  const slowRoutesArray = routes.filter(({ to, from, days, stops }) => {
-    if ((days & DAY) === 0) return false;
-    if (!(TODAY >= from && TODAY <= to)) return false;
+  const slowRoutes = new Map();
+  const slowRoutesArray = routes.forEach(route => {
+    const { id: routeId, to, from, days, stops } = route;
 
-    let i = 0;
-    for (; i < stops.length; i += 1) {
-      const { id } = stops[i];
-      if (id === POINTB) {
-        return false;
-      } else if (id === POINTA) {
-        break;
+    if ((days & DAY) !== 0 && TODAY >= from && TODAY <= to) {
+      const aIndex = stops.findIndex(s => s.id === POINTA);
+      const bIndex = stops.findIndex(s => s.id === POINTB);
+      if (aIndex !== -1 && bIndex !== -1 && bIndex > aIndex) {
+        slowRoutes.set(routeId, route);
+      } else {
+        slowRoutes.delete(routeId);
       }
     }
-
-    i += 1;
-    for (; i < stops.length; i += 1) {
-      const { id } = stops[i];
-      if (id === POINTB) {
-        return true;
-      }
-    }
-
-    return false;
   });
-  const slowRoutes = slowRoutesArray.reduce(
-    (accum, route) => accum.set(route.id, route),
-    new Map()
-  );
   console.timeEnd("ROUTE");
 
   // console.log(slowRoutes.map(r => r.stops.map(s => sIds[s.id])));
