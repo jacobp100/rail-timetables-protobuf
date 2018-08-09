@@ -6,7 +6,13 @@ const encodeTime = (h, m) => h * 60 + m;
 
 const day = 24 * 60 * 60 * 1000;
 const encodeDate = (y, m, d) =>
-  Math.round(Math.abs((Date.UTC(y, m - 1, d) - Date.UTC(2018, 0, 01)) / day));
+  Math.round((Date.UTC(y, m - 1, d) - Date.UTC(2018, 0, 01)) / day);
+
+const encodeRouteId = id => {
+  const charIndex = id[0].toLowerCase().charCodeAt(0) - "a".charCodeAt(0);
+  const num = Number(id.slice(1));
+  return (charIndex << 17) | num;
+};
 
 async function* chunksToLines(chunksAsync) {
   let previous = "";
@@ -82,16 +88,16 @@ const createRoute = line => {
     throw new Error(`Expected type for ${typeCode}`);
   }
 
-  const id = line.slice(3, 10);
+  const id = encodeRouteId(line.slice(3, 10));
   const days = parseInt(line.slice(21, 28), 2);
 
   const from = encodeDate(
-    Number(line.slice(9, 11)),
+    2000 + Number(line.slice(9, 11)),
     Number(line.slice(11, 13)),
     Number(line.slice(13, 15))
   );
   const to = encodeDate(
-    Number(line.slice(15, 17)),
+    2000 + Number(line.slice(15, 17)),
     Number(line.slice(17, 19)),
     Number(line.slice(19, 21))
   );
@@ -222,9 +228,13 @@ async function* run() {
 
   {
     let i = 0;
-    for ({ days, stops } of routes) {
+    for ({ from, to, days, stops } of routes) {
       if (data[i] !== 0) throw new Error("Invalid state");
       data[i] = (0 << 31) | (days << 24) | ((stops.length & 0b1111111) << 17);
+      data[i + 1] =
+        (0 << 31) |
+        ((from & 0b11111111111) << 20) |
+        ((to & 0b11111111111) << 9);
       i += 2;
       for (const { id, platform, arrival, departure } of stops) {
         if (data[i] !== 0) throw new Error("Invalid state");
@@ -267,6 +277,8 @@ async function* run() {
   const WAT = stations.WATRLMN.id;
   console.log({ WAT });
 
+  const today = encodeDate(2018, 8, 9);
+
   console.time("ROUTE FAST");
   const foundRoutes = [];
   {
@@ -276,17 +288,20 @@ async function* run() {
       const startIndex = i;
       const nextIndex = i + (((data[i] >> 17) & 0b1111111) + 1) * 2;
 
-      if ((data[i] & DAY) !== 0) {
+      const from = (data[i + 1] >> 20) & 0b11111111111;
+      const to = (data[i + 1] >> 9) & 0b11111111111;
+
+      if ((data[i] & DAY) !== 0 && today >= from && today <= to) {
         i += 2;
         for (; i < nextIndex; i += 2) {
-          const from = (data[i] >> 18) & 0b111111111111;
-          if (from === WAT) {
+          const fromId = (data[i] >> 18) & 0b111111111111;
+          if (fromId === WAT) {
             break;
-          } else if (from === SUR) {
+          } else if (fromId === SUR) {
             i += 2;
             for (; i < nextIndex; i += 2) {
-              const to = (data[i] >> 18) & 0b111111111111;
-              if (to === WAT) {
+              const toId = (data[i] >> 18) & 0b111111111111;
+              if (toId === WAT) {
                 foundRoutes.push(startIndex);
                 break;
               }
@@ -302,8 +317,9 @@ async function* run() {
   console.timeEnd("ROUTE FAST");
 
   console.time("ROUTE");
-  const surWatOnMon = routes.filter(({ days, stops }) => {
+  const surWatOnMon = routes.filter(({ to, from, days, stops }) => {
     if ((days & (1 << 6)) === 0) return false;
+    if (!(today >= from && today <= to)) return false;
 
     let i = 0;
     for (; i < stops.length; i += 1) {
@@ -334,7 +350,7 @@ async function* run() {
 
 /*
 ROUTE
-a (22) - id
+a (22) - id (5 + 17 bits)
 b (7) - days
 c (11) - from (could be 10)
 d (11) - to (could be 10)
