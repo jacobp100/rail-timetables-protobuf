@@ -228,20 +228,24 @@ async function* run() {
 
   {
     let i = 0;
-    for ({ from, to, days, stops } of routes) {
+    for ({ id: routeId, from, to, days, stops } of routes) {
       if (data[i] !== 0) throw new Error("Invalid state");
-      data[i] = (0 << 31) | (days << 24) | ((stops.length & 0b1111111) << 17);
+      data[i] =
+        (0 << 31) |
+        ((stops.length & 0b1111111) << 23) |
+        ((routeId & 0b1111111111111111111111) << 1);
       data[i + 1] =
         (0 << 31) |
         ((from & 0b11111111111) << 20) |
-        ((to & 0b11111111111) << 9);
+        ((to & 0b11111111111) << 9) |
+        ((days & 0b1111111) << 2);
       i += 2;
-      for (const { id, platform, arrival, departure } of stops) {
+      for (const { id: stopId, platform, arrival, departure } of stops) {
         if (data[i] !== 0) throw new Error("Invalid state");
         const platformIndex = platforms.indexOf(platform);
         const d1 =
           (1 << 31) |
-          ((id & 0b111111111111) << 18) |
+          ((stopId & 0b111111111111) << 18) |
           ((platformIndex & 0b11111111) << 10);
         const d2 =
           (0 << 31) |
@@ -272,37 +276,37 @@ async function* run() {
 
   const ids = Object.values(stations).map(s => s.id);
 
-  const SUR = Object.values(stations).find(s => s.tla === "SUR").id;
-  const CLJ = Object.values(stations).find(s => s.tla === "CLJ").id;
-  const WAT = stations.WATRLMN.id;
-  console.log({ WAT });
-
-  const today = encodeDate(2018, 8, 9);
+  const POINTA = Object.values(stations).find(s => s.tla === "SUR").id;
+  // const CLJ = Object.values(stations).find(s => s.tla === "CLJ").id;
+  const POINTB = stations.WATRLMN.id;
+  const TODAY = encodeDate(2018, 8, 9);
+  const DAY = 1 << 6;
 
   console.time("ROUTE FAST");
-  const foundRoutes = [];
+  const fastRoutes = new Map();
   {
-    const DAY = (1 << 6) << 24;
     let i = 0;
     while (i < data.length) {
       const startIndex = i;
-      const nextIndex = i + (((data[i] >> 17) & 0b1111111) + 1) * 2;
+      const nextIndex = i + (((data[i] >> 23) & 0b1111111) + 1) * 2;
 
-      const from = (data[i + 1] >> 20) & 0b11111111111;
-      const to = (data[i + 1] >> 9) & 0b11111111111;
+      const routeId = (data[i] >>> 0) & 0b1111111111111111111111;
+      const from = (data[i + 1] >>> 20) & 0b11111111111;
+      const to = (data[i + 1] >>> 9) & 0b11111111111;
+      const days = (data[i + 1] >>> 2) & 0b1111111;
 
-      if ((data[i] & DAY) !== 0 && today >= from && today <= to) {
+      if ((days & DAY) !== 0 && TODAY >= from && TODAY <= to) {
         i += 2;
         for (; i < nextIndex; i += 2) {
-          const fromId = (data[i] >> 18) & 0b111111111111;
-          if (fromId === WAT) {
+          const fromId = (data[i] >>> 18) & 0b111111111111;
+          if (fromId === POINTB) {
             break;
-          } else if (fromId === SUR) {
+          } else if (fromId === POINTA) {
             i += 2;
             for (; i < nextIndex; i += 2) {
-              const toId = (data[i] >> 18) & 0b111111111111;
-              if (toId === WAT) {
-                foundRoutes.push(startIndex);
+              const toId = (data[i] >>> 18) & 0b111111111111;
+              if (toId === POINTB) {
+                fastRoutes.set(routeId, startIndex);
                 break;
               }
             }
@@ -317,16 +321,16 @@ async function* run() {
   console.timeEnd("ROUTE FAST");
 
   console.time("ROUTE");
-  const surWatOnMon = routes.filter(({ to, from, days, stops }) => {
-    if ((days & (1 << 6)) === 0) return false;
-    if (!(today >= from && today <= to)) return false;
+  const slowRoutesArray = routes.filter(({ to, from, days, stops }) => {
+    if ((days & DAY) === 0) return false;
+    if (!(TODAY >= from && TODAY <= to)) return false;
 
     let i = 0;
     for (; i < stops.length; i += 1) {
       const { id } = stops[i];
-      if (id === WAT) {
+      if (id === POINTB) {
         return false;
-      } else if (id === SUR) {
+      } else if (id === POINTA) {
         break;
       }
     }
@@ -334,18 +338,22 @@ async function* run() {
     i += 1;
     for (; i < stops.length; i += 1) {
       const { id } = stops[i];
-      if (id === WAT) {
+      if (id === POINTB) {
         return true;
       }
     }
 
     return false;
   });
+  const slowRoutes = slowRoutesArray.reduce(
+    (accum, route) => accum.set(route.id, route),
+    new Map()
+  );
   console.timeEnd("ROUTE");
 
-  // console.log(surWatOnMon.map(r => r.stops.map(s => sIds[s.id])));
-  console.log(foundRoutes.length);
-  console.log(surWatOnMon.length);
+  // console.log(slowRoutes.map(r => r.stops.map(s => sIds[s.id])));
+  console.log(fastRoutes.size);
+  console.log(slowRoutes.size);
 }
 
 /*
