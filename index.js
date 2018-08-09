@@ -4,6 +4,10 @@ const os = require("os");
 
 const encodeTime = (h, m) => h * 60 + m;
 
+const day = 24 * 60 * 60 * 1000;
+const encodeDate = (y, m, d) =>
+  Math.round(Math.abs((Date.UTC(y, m - 1, d) - Date.UTC(2018, 0, 01)) / day));
+
 async function* chunksToLines(chunksAsync) {
   let previous = "";
   for await (const chunk of chunksAsync) {
@@ -78,18 +82,21 @@ const createRoute = line => {
     throw new Error(`Expected type for ${typeCode}`);
   }
 
-  const from = line.slice(9, 15);
-  const to = line.slice(15, 21);
+  const id = line.slice(3, 10);
+  const days = parseInt(line.slice(21, 28), 2);
 
-  return {
-    stops: [],
-    id: line.slice(3, 10),
-    days: parseInt(line.slice(21, 28), 2),
-    from,
-    to,
-    type,
-    status
-  };
+  const from = encodeDate(
+    Number(line.slice(9, 11)),
+    Number(line.slice(11, 13)),
+    Number(line.slice(13, 15))
+  );
+  const to = encodeDate(
+    Number(line.slice(15, 17)),
+    Number(line.slice(17, 19)),
+    Number(line.slice(19, 21))
+  );
+
+  return { stops: [], id, days, from, to, type, status };
 };
 const createStop = (stations, line) => {
   const station = stations[line.slice(2, 9).trimRight()];
