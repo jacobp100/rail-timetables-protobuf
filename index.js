@@ -4,6 +4,12 @@ const os = require("os");
 
 const encodeTime = (h, m) => h * 60 + m;
 
+const formatTime = value => {
+  const h = Math.floor(value / 60);
+  const m = value % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
+};
+
 const day = 24 * 60 * 60 * 1000;
 const encodeDate = (y, m, d) =>
   Math.round((Date.UTC(y, m - 1, d) - Date.UTC(2018, 0, 01)) / day);
@@ -11,7 +17,15 @@ const encodeDate = (y, m, d) =>
 const encodeRouteId = id => {
   const charIndex = id[0].toLowerCase().charCodeAt(0) - "a".charCodeAt(0);
   const num = Number(id.slice(1));
-  return (charIndex << 17) | num;
+  return ((charIndex & 0b11111) << 17) | (num & 0b11111111111111111);
+};
+
+const formatId = value => {
+  const char = String.fromCharCode(
+    ((value >> 17) & 0b11111) + "a".charCodeAt(0)
+  ).toUpperCase();
+  const num = value & 0b11111111111111111;
+  return `${char}${String(num).padStart(5, "0")}`;
 };
 
 async function* chunksToLines(chunksAsync) {
@@ -88,7 +102,11 @@ const createRoute = line => {
     throw new Error(`Expected type for ${typeCode}`);
   }
 
-  const id = encodeRouteId(line.slice(3, 10));
+  const id = encodeRouteId(line.slice(3, 9));
+  if (formatId(id) !== line.slice(3, 9)) {
+    throw new Error(`Could not format ${line.slice(3, 9)}`);
+  }
+
   const days = parseInt(line.slice(21, 28), 2);
 
   const from = encodeDate(
@@ -107,6 +125,7 @@ const createRoute = line => {
 const createStop = (stations, line) => {
   const station = stations[line.slice(2, 9).trimRight()];
   if (station == null) return null;
+
   const { id } = station;
 
   let arrival;
@@ -124,6 +143,9 @@ const createStop = (stations, line) => {
       platform = line.slice(19, 22).trimRight();
       break;
     case "I":
+      const passTime = line.slice(20, 24).trimRight();
+      if (passTime.length > 0) return null;
+
       arrival = encodeTime(
         Number(line.slice(25, 27)),
         Number(line.slice(27, 29))
@@ -276,11 +298,13 @@ async function* run() {
 
   const ids = Object.values(stations).map(s => s.id);
 
-  const POINTA = Object.values(stations).find(s => s.tla === "SUR").id;
-  // const CLJ = Object.values(stations).find(s => s.tla === "CLJ").id;
-  const POINTB = stations.WATRLMN.id;
+  let POINTA = Object.values(stations).find(s => s.tla === "SUR").id;
+  // let CLJ = Object.values(stations).find(s => s.tla === "CLJ").id;
+  let POINTB = stations.WATRLMN.id;
   const TODAY = encodeDate(2018, 8, 9);
   const DAY = 1 << 6;
+
+  [POINTA, POINTB] = [POINTB, POINTA];
 
   console.time("ROUTE FAST");
   const fastRoutes = new Map();
@@ -342,6 +366,34 @@ async function* run() {
   // console.log(slowRoutes.map(r => r.stops.map(s => sIds[s.id])));
   console.log(fastRoutes.size);
   console.log(slowRoutes.size);
+
+  const formatRoute = route => {
+    const start = route.stops.find(s => s.id === POINTA);
+    const end = route.stops.find(s => s.id === POINTB);
+    let duration = end.arrival - start.departure;
+    if (duration < 0) duration += 24 * 60;
+    return {
+      // ...route,
+      id: formatId(route.id),
+      start: formatTime(start.departure),
+      end: formatTime(end.arrival),
+      duration
+      // stops: route.stops.map(stop => ({
+      //   ...stop,
+      //   id: idMap[stop.id]
+      // }))
+    };
+  };
+
+  const untime = s => {
+    const [h, m] = s.split(":").map(Number);
+    return h * 60 + m;
+  };
+  console.log(
+    Array.from(slowRoutes.values(), formatRoute)
+      .sort((a, b) => untime(a.start) - untime(b.start))
+      .slice(-70, -50)
+  );
 }
 
 /*
