@@ -49,20 +49,46 @@ async function* getStations(dataStream) {
   return stations;
 }
 
+const TYPE_NORMAL = 0;
+const TYPE_BUS_REPLACEMENT = 1;
+
+const types = {
+  "": TYPE_NORMAL, // cancellations
+  OO: TYPE_NORMAL,
+  OU: TYPE_NORMAL,
+  OL: TYPE_NORMAL,
+  OW: TYPE_NORMAL,
+  XC: TYPE_NORMAL,
+  XD: TYPE_NORMAL,
+  XI: TYPE_NORMAL,
+  XR: TYPE_NORMAL,
+  XU: TYPE_NORMAL,
+  XX: TYPE_NORMAL,
+  XZ: TYPE_NORMAL,
+  BS: TYPE_BUS_REPLACEMENT,
+  BR: TYPE_BUS_REPLACEMENT
+};
+
 const createRoute = line => {
+  const status = line.slice(79, 80).trimRight();
+  const typeCode = line.slice(30, 32).trimRight();
+  const type = types[typeCode];
+
+  if (type == null) {
+    throw new Error(`Expected type for ${typeCode}`);
+  }
+
   const from = line.slice(9, 15);
   const to = line.slice(15, 21);
-
-  // if (Number(to) - Number(from) <= 7) {
-  //   return null;
-  // }
 
   return {
     stops: [],
     id: line.slice(3, 10),
     days: parseInt(line.slice(21, 28), 2),
     from,
-    to
+    to,
+    type,
+    status
   };
 };
 const createStop = (stations, line) => {
@@ -213,6 +239,7 @@ async function* run() {
 
   console.log({ numRoutes, numStops, size, maxRouteStops });
   // console.log(fromTo);
+  // console.log(Object.keys(fromTo).length);
   console.log(platforms.length);
   console.log(Object.keys(stations).length);
   console.log(stationsSet.size);
@@ -300,11 +327,13 @@ async function* run() {
 
 /*
 ROUTE
-a (7) - days
-b (22) - id
-c (11) - from
-d (11) - to
-e (7) - numStops
+a (22) - id
+b (7) - days
+c (11) - from (could be 10)
+d (11) - to (could be 10)
+e (7) - num stops (optimisation only, could be removed if needed)
+f (1) - bus replacement
+g (2) - status (P, C, O, N)
 
 STOP
 a (12) - station id
