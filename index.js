@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const protobuf = require("protobufjs");
+const { sortBy } = require("lodash");
 
 const encodeTime = (h, m) => h * 60 + m;
 
@@ -251,13 +252,14 @@ async function* run() {
   for await (const route of schedule) {
     routes.push(route);
   }
-  const message = { routes };
 
+  const stations = Object.values(sortBy(tlaMap, "index"));
   fs.writeFileSync(
     path.join(os.homedir(), "Downloads/ttis989/stations.json"),
-    JSON.stringify({ stations: tlaMap, platforms: mutableContext.platforms })
+    JSON.stringify(stations)
   );
 
+  const message = { routes };
   const root = await loadProtoBuf("types.proto");
   const buffer = root
     .lookupType("types.Data")
