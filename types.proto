@@ -12,8 +12,8 @@ message Data {
 
     string id = 1;
     uint32 days = 2;
-    uint32 from = 3;
-    uint32 to = 4;
+    uint32 dateFrom = 3;
+    uint32 dateTo = 4;
     repeated Stop stops = 5;
   }
 

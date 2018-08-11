@@ -66,8 +66,8 @@ typedef GPB_ENUM(Data_FieldNumber) {
 typedef GPB_ENUM(Data_Route_FieldNumber) {
   Data_Route_FieldNumber_Id_p = 1,
   Data_Route_FieldNumber_Days = 2,
-  Data_Route_FieldNumber_From = 3,
-  Data_Route_FieldNumber_To = 4,
+  Data_Route_FieldNumber_DateFrom = 3,
+  Data_Route_FieldNumber_DateTo = 4,
   Data_Route_FieldNumber_StopsArray = 5,
 };
 
@@ -77,9 +77,9 @@ typedef GPB_ENUM(Data_Route_FieldNumber) {
 
 @property(nonatomic, readwrite) uint32_t days;
 
-@property(nonatomic, readwrite) uint32_t from;
+@property(nonatomic, readwrite) uint32_t dateFrom;
 
-@property(nonatomic, readwrite) uint32_t to;
+@property(nonatomic, readwrite) uint32_t dateTo;
 
 @property(nonatomic, readwrite, strong, null_resettable) NSMutableArray<Data_Route_Stop*> *stopsArray;
 /** The number of items in @c stopsArray without causing the array to be created. */

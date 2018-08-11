@@ -91,15 +91,15 @@ typedef struct Data__storage_ {
 
 @dynamic id_p;
 @dynamic days;
-@dynamic from;
-@dynamic to;
+@dynamic dateFrom;
+@dynamic dateTo;
 @dynamic stopsArray, stopsArray_Count;
 
 typedef struct Data_Route__storage_ {
   uint32_t _has_storage_[1];
   uint32_t days;
-  uint32_t from;
-  uint32_t to;
+  uint32_t dateFrom;
+  uint32_t dateTo;
   NSString *id_p;
   NSMutableArray *stopsArray;
 } Data_Route__storage_;
@@ -129,21 +129,21 @@ typedef struct Data_Route__storage_ {
         .dataType = GPBDataTypeUInt32,
       },
       {
-        .name = "from",
+        .name = "dateFrom",
         .dataTypeSpecific.className = NULL,
-        .number = Data_Route_FieldNumber_From,
+        .number = Data_Route_FieldNumber_DateFrom,
         .hasIndex = 2,
-        .offset = (uint32_t)offsetof(Data_Route__storage_, from),
-        .flags = GPBFieldOptional,
+        .offset = (uint32_t)offsetof(Data_Route__storage_, dateFrom),
+        .flags = (GPBFieldFlags)(GPBFieldOptional | GPBFieldTextFormatNameCustom),
         .dataType = GPBDataTypeUInt32,
       },
       {
-        .name = "to",
+        .name = "dateTo",
         .dataTypeSpecific.className = NULL,
-        .number = Data_Route_FieldNumber_To,
+        .number = Data_Route_FieldNumber_DateTo,
         .hasIndex = 3,
-        .offset = (uint32_t)offsetof(Data_Route__storage_, to),
-        .flags = GPBFieldOptional,
+        .offset = (uint32_t)offsetof(Data_Route__storage_, dateTo),
+        .flags = (GPBFieldFlags)(GPBFieldOptional | GPBFieldTextFormatNameCustom),
         .dataType = GPBDataTypeUInt32,
       },
       {
@@ -164,6 +164,11 @@ typedef struct Data_Route__storage_ {
                                     fieldCount:(uint32_t)(sizeof(fields) / sizeof(GPBMessageFieldDescription))
                                    storageSize:sizeof(Data_Route__storage_)
                                          flags:GPBDescriptorInitializationFlag_None];
+#if !GPBOBJC_SKIP_MESSAGE_TEXTFORMAT_EXTRAS
+    static const char *extraTextFormatInfo =
+        "\002\003\010\000\004\006\000";
+    [localDescriptor setupExtraTextInfo:extraTextFormatInfo];
+#endif  // !GPBOBJC_SKIP_MESSAGE_TEXTFORMAT_EXTRAS
     [localDescriptor setupContainingMessageClassName:GPBStringifySymbol(Data)];
     NSAssert(descriptor == nil, @"Startup recursed!");
     descriptor = localDescriptor;

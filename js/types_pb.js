@@ -207,8 +207,8 @@ proto.types.Data.Route.toObject = function(includeInstance, msg) {
   var f, obj = {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
     days: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    from: jspb.Message.getFieldWithDefault(msg, 3, 0),
-    to: jspb.Message.getFieldWithDefault(msg, 4, 0),
+    datefrom: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    dateto: jspb.Message.getFieldWithDefault(msg, 4, 0),
     stopsList: jspb.Message.toObjectList(msg.getStopsList(),
     proto.types.Data.Route.Stop.toObject, includeInstance)
   };
@@ -257,11 +257,11 @@ proto.types.Data.Route.deserializeBinaryFromReader = function(msg, reader) {
       break;
     case 3:
       var value = /** @type {number} */ (reader.readUint32());
-      msg.setFrom(value);
+      msg.setDatefrom(value);
       break;
     case 4:
       var value = /** @type {number} */ (reader.readUint32());
-      msg.setTo(value);
+      msg.setDateto(value);
       break;
     case 5:
       var value = new proto.types.Data.Route.Stop;
@@ -311,14 +311,14 @@ proto.types.Data.Route.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getFrom();
+  f = message.getDatefrom();
   if (f !== 0) {
     writer.writeUint32(
       3,
       f
     );
   }
-  f = message.getTo();
+  f = message.getDateto();
   if (f !== 0) {
     writer.writeUint32(
       4,
@@ -590,31 +590,31 @@ proto.types.Data.Route.prototype.setDays = function(value) {
 
 
 /**
- * optional uint32 from = 3;
+ * optional uint32 dateFrom = 3;
  * @return {number}
  */
-proto.types.Data.Route.prototype.getFrom = function() {
+proto.types.Data.Route.prototype.getDatefrom = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
 };
 
 
 /** @param {number} value */
-proto.types.Data.Route.prototype.setFrom = function(value) {
+proto.types.Data.Route.prototype.setDatefrom = function(value) {
   jspb.Message.setProto3IntField(this, 3, value);
 };
 
 
 /**
- * optional uint32 to = 4;
+ * optional uint32 dateTo = 4;
  * @return {number}
  */
-proto.types.Data.Route.prototype.getTo = function() {
+proto.types.Data.Route.prototype.getDateto = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
 };
 
 
 /** @param {number} value */
-proto.types.Data.Route.prototype.setTo = function(value) {
+proto.types.Data.Route.prototype.setDateto = function(value) {
   jspb.Message.setProto3IntField(this, 4, value);
 };
 

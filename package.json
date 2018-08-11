@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "protoc --js_out=import_style=commonjs:./js/ --objc_out=./objc/ ./types.proto"
   },
   "keywords": [],
   "author": "",
