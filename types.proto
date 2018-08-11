@@ -1,0 +1,21 @@
+syntax = "proto3";
+package types;
+
+message Data {
+  message Route {
+    message Stop {
+      uint32 stationId = 1;
+      uint32 arrival = 2;
+      uint32 departure = 3;
+      uint32 platform = 4;
+    }
+
+    string id = 1;
+    uint32 days = 2;
+    uint32 from = 3;
+    uint32 to = 4;
+    repeated Stop stops = 5;
+  }
+
+  repeated Route routes = 1;
+}

@@ -2,6 +2,7 @@
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const protobuf = require("protobufjs");
 
 const encodeTime = (h, m) => h * 60 + m;
 
@@ -116,29 +117,25 @@ const createRoute = line => {
     throw new Error(`Expected type for ${typeCode}`);
   }
 
-  const id = encodeRouteId(line.slice(3, 9));
-  if (formatId(id) !== line.slice(3, 9)) {
-    throw new Error(`Could not format ${line.slice(3, 9)}`);
-  }
-
+  const id = line.slice(3, 9);
   const days = parseInt(line.slice(21, 28), 2);
 
-  const from = encodeDate(
+  const dateFrom = encodeDate(
     2000 + Number(line.slice(9, 11)),
     Number(line.slice(11, 13)),
     Number(line.slice(13, 15))
   );
-  const to = encodeDate(
+  const dateTo = encodeDate(
     2000 + Number(line.slice(15, 17)),
     Number(line.slice(17, 19)),
     Number(line.slice(19, 21))
   );
 
-  return { stops: [], id, days, from, to, type, status };
+  return { stops: [], id, days, dateFrom, dateTo, type, status };
 };
 const createStop = (stations, line) => {
-  const id = stations[line.slice(2, 9).trimRight()];
-  if (id == null) return null;
+  const stationId = stations[line.slice(2, 9).trimRight()];
+  if (stationId == null) return null;
 
   let arrival;
   let departure;
@@ -173,7 +170,7 @@ const createStop = (stations, line) => {
       throw new Error("Unknown format");
   }
 
-  return { id, platform, arrival, departure };
+  return { stationId, platform, arrival, departure };
 };
 const scheduleRe = /^BSN/;
 const scheduleChangedRe = /^BS[DR]/;
@@ -237,7 +234,7 @@ function routeEncoder() {
       ((days & 0b1111111) << 2);
     i += 2;
 
-    for (const { id: stopId, platform, arrival, departure } of stops) {
+    for (const { stationId, platform, arrival, departure } of stops) {
       if (data[i] !== 0) throw new Error("Invalid state");
 
       let platformIndex = platforms.indexOf(platform);
@@ -247,7 +244,7 @@ function routeEncoder() {
 
       const d1 =
         (1 << 31) |
-        ((stopId & 0b111111111111) << 18) |
+        ((stationId & 0b111111111111) << 18) |
         ((platformIndex & 0b11111111) << 10);
       const d2 =
         (0 << 31) |
@@ -347,6 +344,11 @@ async function* run() {
     path.join(os.homedir(), "Downloads/ttis989/ttisf989.ui32")
   );
 
+  fs.writeFileSync(
+    path.join(os.homedir(), "Downloads/ttis989/stations.json"),
+    JSON.stringify(tlaMap)
+  );
+
   let numStops = 0;
   let maxRouteStops = 0;
   const stationsSet = new Set();
@@ -373,6 +375,36 @@ async function* run() {
   const numRoutes = routes.length;
   const size = numRoutes + numStops;
   const data = new Uint32Array(size * 2);
+
+  protobuf.load("types.proto", (err, root) => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+
+    const Data = root.lookupType("types.Data");
+
+    const r = routes.map(r => ({
+      id: r.id,
+      days: r.days,
+      dateFrom: r.dateFrom,
+      dateTo: r.dateTo,
+      stops: r.stops.map(s => ({
+        stationId: s.stationId,
+        arrival: s.arrival,
+        departure: s.departure,
+        platform: 0
+      }))
+    }));
+
+    const message = { routes: r };
+
+    const buffer = Data.encode(message).finish();
+    fs.writeFileSync(
+      path.join(os.homedir(), "Downloads/ttis989/ttisf989.pr"),
+      buffer
+    );
+  });
 
   // const idMap = Object.values(stations).reduce((accum, { id, tla }) => {
   //   accum[id] = tla;
