@@ -90,14 +90,14 @@ typedef struct Data__storage_ {
 @implementation Data_Route
 
 @dynamic id_p;
-@dynamic days;
+@dynamic operatingDays;
 @dynamic dateFrom;
 @dynamic dateTo;
 @dynamic stopsArray, stopsArray_Count;
 
 typedef struct Data_Route__storage_ {
   uint32_t _has_storage_[1];
-  uint32_t days;
+  uint32_t operatingDays;
   uint32_t dateFrom;
   uint32_t dateTo;
   NSString *id_p;
@@ -120,12 +120,12 @@ typedef struct Data_Route__storage_ {
         .dataType = GPBDataTypeString,
       },
       {
-        .name = "days",
+        .name = "operatingDays",
         .dataTypeSpecific.className = NULL,
-        .number = Data_Route_FieldNumber_Days,
+        .number = Data_Route_FieldNumber_OperatingDays,
         .hasIndex = 1,
-        .offset = (uint32_t)offsetof(Data_Route__storage_, days),
-        .flags = GPBFieldOptional,
+        .offset = (uint32_t)offsetof(Data_Route__storage_, operatingDays),
+        .flags = (GPBFieldFlags)(GPBFieldOptional | GPBFieldTextFormatNameCustom),
         .dataType = GPBDataTypeUInt32,
       },
       {
@@ -166,7 +166,7 @@ typedef struct Data_Route__storage_ {
                                          flags:GPBDescriptorInitializationFlag_None];
 #if !GPBOBJC_SKIP_MESSAGE_TEXTFORMAT_EXTRAS
     static const char *extraTextFormatInfo =
-        "\002\003\010\000\004\006\000";
+        "\003\002\r\000\003\010\000\004\006\000";
     [localDescriptor setupExtraTextInfo:extraTextFormatInfo];
 #endif  // !GPBOBJC_SKIP_MESSAGE_TEXTFORMAT_EXTRAS
     [localDescriptor setupContainingMessageClassName:GPBStringifySymbol(Data)];
@@ -183,16 +183,16 @@ typedef struct Data_Route__storage_ {
 @implementation Data_Route_Stop
 
 @dynamic stationId;
-@dynamic arrival;
-@dynamic departure;
+@dynamic arrivalTime;
+@dynamic departureTime;
 @dynamic platform;
 
 typedef struct Data_Route_Stop__storage_ {
   uint32_t _has_storage_[1];
   uint32_t stationId;
-  uint32_t arrival;
-  uint32_t departure;
-  uint32_t platform;
+  uint32_t arrivalTime;
+  uint32_t departureTime;
+  NSString *platform;
 } Data_Route_Stop__storage_;
 
 // This method is threadsafe because it is initially called
@@ -211,21 +211,21 @@ typedef struct Data_Route_Stop__storage_ {
         .dataType = GPBDataTypeUInt32,
       },
       {
-        .name = "arrival",
+        .name = "arrivalTime",
         .dataTypeSpecific.className = NULL,
-        .number = Data_Route_Stop_FieldNumber_Arrival,
+        .number = Data_Route_Stop_FieldNumber_ArrivalTime,
         .hasIndex = 1,
-        .offset = (uint32_t)offsetof(Data_Route_Stop__storage_, arrival),
-        .flags = GPBFieldOptional,
+        .offset = (uint32_t)offsetof(Data_Route_Stop__storage_, arrivalTime),
+        .flags = (GPBFieldFlags)(GPBFieldOptional | GPBFieldTextFormatNameCustom),
         .dataType = GPBDataTypeUInt32,
       },
       {
-        .name = "departure",
+        .name = "departureTime",
         .dataTypeSpecific.className = NULL,
-        .number = Data_Route_Stop_FieldNumber_Departure,
+        .number = Data_Route_Stop_FieldNumber_DepartureTime,
         .hasIndex = 2,
-        .offset = (uint32_t)offsetof(Data_Route_Stop__storage_, departure),
-        .flags = GPBFieldOptional,
+        .offset = (uint32_t)offsetof(Data_Route_Stop__storage_, departureTime),
+        .flags = (GPBFieldFlags)(GPBFieldOptional | GPBFieldTextFormatNameCustom),
         .dataType = GPBDataTypeUInt32,
       },
       {
@@ -235,7 +235,7 @@ typedef struct Data_Route_Stop__storage_ {
         .hasIndex = 3,
         .offset = (uint32_t)offsetof(Data_Route_Stop__storage_, platform),
         .flags = GPBFieldOptional,
-        .dataType = GPBDataTypeUInt32,
+        .dataType = GPBDataTypeString,
       },
     };
     GPBDescriptor *localDescriptor =
@@ -248,7 +248,7 @@ typedef struct Data_Route_Stop__storage_ {
                                          flags:GPBDescriptorInitializationFlag_None];
 #if !GPBOBJC_SKIP_MESSAGE_TEXTFORMAT_EXTRAS
     static const char *extraTextFormatInfo =
-        "\001\001\t\000";
+        "\003\001\t\000\002\013\000\003\r\000";
     [localDescriptor setupExtraTextInfo:extraTextFormatInfo];
 #endif  // !GPBOBJC_SKIP_MESSAGE_TEXTFORMAT_EXTRAS
     [localDescriptor setupContainingMessageClassName:GPBStringifySymbol(Data_Route)];

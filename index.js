@@ -133,7 +133,7 @@ const createRoute = line => {
 
   return { id, days, dateFrom, dateTo, stops: [] };
 };
-const createStop = ({ platforms }, stations, line) => {
+const createStop = (stations, line) => {
   const stationId = stations[line.slice(2, 9).trimRight()];
   if (stationId == null) return null;
 
@@ -149,7 +149,7 @@ const createStop = ({ platforms }, stations, line) => {
         Number(line.slice(17, 19))
       );
       departure = arrival;
-      platformString = line.slice(19, 22).trimRight();
+      platform = line.slice(19, 22).trimRight();
       break;
     case "I": {
       const passTime = line.slice(20, 24).trimRight();
@@ -163,15 +163,12 @@ const createStop = ({ platforms }, stations, line) => {
         Number(line.slice(29, 31)),
         Number(line.slice(31, 33))
       );
-      platformString = line.slice(33, 36).trimRight();
+      platform = line.slice(33, 36).trimRight();
       break;
     }
     default:
       throw new Error("Unknown format");
   }
-
-  let platform = platforms.indexOf(platformString);
-  if (platform === -1) platform = platforms.push(platformString) - 1;
 
   return { stationId, arrival, departure, platform };
 };
@@ -183,7 +180,7 @@ const pointRe = /^L[OIT]/;
 // const intermediateRe = /^LI/;
 const terminateRe = /^LT/;
 
-async function* getRoutes(mutableContext, stationMap, dataStream) {
+async function* getRoutes(stationMap, dataStream) {
   let currentRoute = null;
 
   let changed = 0;
@@ -196,7 +193,7 @@ async function* getRoutes(mutableContext, stationMap, dataStream) {
     } else if (scheduleDataRe.test(line)) {
       // Do nothing
     } else if (currentRoute != null && pointRe.test(line)) {
-      const stop = createStop(mutableContext, stationMap, line);
+      const stop = createStop(stationMap, line);
       if (stop != null) {
         currentRoute.stops.push(stop);
         if (terminateRe.test(line)) {
@@ -242,9 +239,7 @@ async function* run() {
     )
   ).next();
 
-  const mutableContext = { platforms: [] };
   const schedule = getRoutes(
-    mutableContext,
     stationMap,
     fs.createReadStream(
       path.join(os.homedir(), "Downloads/ttis989/ttisf989.mca"),

@@ -65,7 +65,7 @@ typedef GPB_ENUM(Data_FieldNumber) {
 
 typedef GPB_ENUM(Data_Route_FieldNumber) {
   Data_Route_FieldNumber_Id_p = 1,
-  Data_Route_FieldNumber_Days = 2,
+  Data_Route_FieldNumber_OperatingDays = 2,
   Data_Route_FieldNumber_DateFrom = 3,
   Data_Route_FieldNumber_DateTo = 4,
   Data_Route_FieldNumber_StopsArray = 5,
@@ -75,7 +75,7 @@ typedef GPB_ENUM(Data_Route_FieldNumber) {
 
 @property(nonatomic, readwrite, copy, null_resettable) NSString *id_p;
 
-@property(nonatomic, readwrite) uint32_t days;
+@property(nonatomic, readwrite) uint32_t operatingDays;
 
 @property(nonatomic, readwrite) uint32_t dateFrom;
 
@@ -91,8 +91,8 @@ typedef GPB_ENUM(Data_Route_FieldNumber) {
 
 typedef GPB_ENUM(Data_Route_Stop_FieldNumber) {
   Data_Route_Stop_FieldNumber_StationId = 1,
-  Data_Route_Stop_FieldNumber_Arrival = 2,
-  Data_Route_Stop_FieldNumber_Departure = 3,
+  Data_Route_Stop_FieldNumber_ArrivalTime = 2,
+  Data_Route_Stop_FieldNumber_DepartureTime = 3,
   Data_Route_Stop_FieldNumber_Platform = 4,
 };
 
@@ -100,11 +100,11 @@ typedef GPB_ENUM(Data_Route_Stop_FieldNumber) {
 
 @property(nonatomic, readwrite) uint32_t stationId;
 
-@property(nonatomic, readwrite) uint32_t arrival;
+@property(nonatomic, readwrite) uint32_t arrivalTime;
 
-@property(nonatomic, readwrite) uint32_t departure;
+@property(nonatomic, readwrite) uint32_t departureTime;
 
-@property(nonatomic, readwrite) uint32_t platform;
+@property(nonatomic, readwrite, copy, null_resettable) NSString *platform;
 
 @end
 

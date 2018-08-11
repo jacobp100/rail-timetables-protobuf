@@ -206,7 +206,7 @@ proto.types.Data.Route.prototype.toObject = function(opt_includeInstance) {
 proto.types.Data.Route.toObject = function(includeInstance, msg) {
   var f, obj = {
     id: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    days: jspb.Message.getFieldWithDefault(msg, 2, 0),
+    operatingdays: jspb.Message.getFieldWithDefault(msg, 2, 0),
     datefrom: jspb.Message.getFieldWithDefault(msg, 3, 0),
     dateto: jspb.Message.getFieldWithDefault(msg, 4, 0),
     stopsList: jspb.Message.toObjectList(msg.getStopsList(),
@@ -253,7 +253,7 @@ proto.types.Data.Route.deserializeBinaryFromReader = function(msg, reader) {
       break;
     case 2:
       var value = /** @type {number} */ (reader.readUint32());
-      msg.setDays(value);
+      msg.setOperatingdays(value);
       break;
     case 3:
       var value = /** @type {number} */ (reader.readUint32());
@@ -304,7 +304,7 @@ proto.types.Data.Route.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
-  f = message.getDays();
+  f = message.getOperatingdays();
   if (f !== 0) {
     writer.writeUint32(
       2,
@@ -384,9 +384,9 @@ proto.types.Data.Route.Stop.prototype.toObject = function(opt_includeInstance) {
 proto.types.Data.Route.Stop.toObject = function(includeInstance, msg) {
   var f, obj = {
     stationid: jspb.Message.getFieldWithDefault(msg, 1, 0),
-    arrival: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    departure: jspb.Message.getFieldWithDefault(msg, 3, 0),
-    platform: jspb.Message.getFieldWithDefault(msg, 4, 0)
+    arrivaltime: jspb.Message.getFieldWithDefault(msg, 2, 0),
+    departuretime: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    platform: jspb.Message.getFieldWithDefault(msg, 4, "")
   };
 
   if (includeInstance) {
@@ -429,14 +429,14 @@ proto.types.Data.Route.Stop.deserializeBinaryFromReader = function(msg, reader) 
       break;
     case 2:
       var value = /** @type {number} */ (reader.readUint32());
-      msg.setArrival(value);
+      msg.setArrivaltime(value);
       break;
     case 3:
       var value = /** @type {number} */ (reader.readUint32());
-      msg.setDeparture(value);
+      msg.setDeparturetime(value);
       break;
     case 4:
-      var value = /** @type {number} */ (reader.readUint32());
+      var value = /** @type {string} */ (reader.readString());
       msg.setPlatform(value);
       break;
     default:
@@ -475,14 +475,14 @@ proto.types.Data.Route.Stop.serializeBinaryToWriter = function(message, writer) 
       f
     );
   }
-  f = message.getArrival();
+  f = message.getArrivaltime();
   if (f !== 0) {
     writer.writeUint32(
       2,
       f
     );
   }
-  f = message.getDeparture();
+  f = message.getDeparturetime();
   if (f !== 0) {
     writer.writeUint32(
       3,
@@ -490,8 +490,8 @@ proto.types.Data.Route.Stop.serializeBinaryToWriter = function(message, writer) 
     );
   }
   f = message.getPlatform();
-  if (f !== 0) {
-    writer.writeUint32(
+  if (f.length > 0) {
+    writer.writeString(
       4,
       f
     );
@@ -515,47 +515,47 @@ proto.types.Data.Route.Stop.prototype.setStationid = function(value) {
 
 
 /**
- * optional uint32 arrival = 2;
+ * optional uint32 arrivalTime = 2;
  * @return {number}
  */
-proto.types.Data.Route.Stop.prototype.getArrival = function() {
+proto.types.Data.Route.Stop.prototype.getArrivaltime = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 2, 0));
 };
 
 
 /** @param {number} value */
-proto.types.Data.Route.Stop.prototype.setArrival = function(value) {
+proto.types.Data.Route.Stop.prototype.setArrivaltime = function(value) {
   jspb.Message.setProto3IntField(this, 2, value);
 };
 
 
 /**
- * optional uint32 departure = 3;
+ * optional uint32 departureTime = 3;
  * @return {number}
  */
-proto.types.Data.Route.Stop.prototype.getDeparture = function() {
+proto.types.Data.Route.Stop.prototype.getDeparturetime = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
 };
 
 
 /** @param {number} value */
-proto.types.Data.Route.Stop.prototype.setDeparture = function(value) {
+proto.types.Data.Route.Stop.prototype.setDeparturetime = function(value) {
   jspb.Message.setProto3IntField(this, 3, value);
 };
 
 
 /**
- * optional uint32 platform = 4;
- * @return {number}
+ * optional string platform = 4;
+ * @return {string}
  */
 proto.types.Data.Route.Stop.prototype.getPlatform = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
 };
 
 
-/** @param {number} value */
+/** @param {string} value */
 proto.types.Data.Route.Stop.prototype.setPlatform = function(value) {
-  jspb.Message.setProto3IntField(this, 4, value);
+  jspb.Message.setProto3StringField(this, 4, value);
 };
 
 
@@ -575,16 +575,16 @@ proto.types.Data.Route.prototype.setId = function(value) {
 
 
 /**
- * optional uint32 days = 2;
+ * optional uint32 operatingDays = 2;
  * @return {number}
  */
-proto.types.Data.Route.prototype.getDays = function() {
+proto.types.Data.Route.prototype.getOperatingdays = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 2, 0));
 };
 
 
 /** @param {number} value */
-proto.types.Data.Route.prototype.setDays = function(value) {
+proto.types.Data.Route.prototype.setOperatingdays = function(value) {
   jspb.Message.setProto3IntField(this, 2, value);
 };
 
