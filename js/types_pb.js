@@ -205,7 +205,7 @@ proto.types.Data.Route.prototype.toObject = function(opt_includeInstance) {
  */
 proto.types.Data.Route.toObject = function(includeInstance, msg) {
   var f, obj = {
-    id: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    routeid: jspb.Message.getFieldWithDefault(msg, 1, ""),
     operatingdays: jspb.Message.getFieldWithDefault(msg, 2, 0),
     datefrom: jspb.Message.getFieldWithDefault(msg, 3, 0),
     dateto: jspb.Message.getFieldWithDefault(msg, 4, 0),
@@ -249,7 +249,7 @@ proto.types.Data.Route.deserializeBinaryFromReader = function(msg, reader) {
     switch (field) {
     case 1:
       var value = /** @type {string} */ (reader.readString());
-      msg.setId(value);
+      msg.setRouteid(value);
       break;
     case 2:
       var value = /** @type {number} */ (reader.readUint32());
@@ -297,7 +297,7 @@ proto.types.Data.Route.prototype.serializeBinary = function() {
  */
 proto.types.Data.Route.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getId();
+  f = message.getRouteid();
   if (f.length > 0) {
     writer.writeString(
       1,
@@ -560,16 +560,16 @@ proto.types.Data.Route.Stop.prototype.setPlatform = function(value) {
 
 
 /**
- * optional string id = 1;
+ * optional string routeId = 1;
  * @return {string}
  */
-proto.types.Data.Route.prototype.getId = function() {
+proto.types.Data.Route.prototype.getRouteid = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
 };
 
 
 /** @param {string} value */
-proto.types.Data.Route.prototype.setId = function(value) {
+proto.types.Data.Route.prototype.setRouteid = function(value) {
   jspb.Message.setProto3StringField(this, 1, value);
 };
 

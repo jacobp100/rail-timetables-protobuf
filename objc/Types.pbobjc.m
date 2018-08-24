@@ -89,7 +89,7 @@ typedef struct Data__storage_ {
 
 @implementation Data_Route
 
-@dynamic id_p;
+@dynamic routeId;
 @dynamic operatingDays;
 @dynamic dateFrom;
 @dynamic dateTo;
@@ -100,7 +100,7 @@ typedef struct Data_Route__storage_ {
   uint32_t operatingDays;
   uint32_t dateFrom;
   uint32_t dateTo;
-  NSString *id_p;
+  NSString *routeId;
   NSMutableArray *stopsArray;
 } Data_Route__storage_;
 
@@ -111,12 +111,12 @@ typedef struct Data_Route__storage_ {
   if (!descriptor) {
     static GPBMessageFieldDescription fields[] = {
       {
-        .name = "id_p",
+        .name = "routeId",
         .dataTypeSpecific.className = NULL,
-        .number = Data_Route_FieldNumber_Id_p,
+        .number = Data_Route_FieldNumber_RouteId,
         .hasIndex = 0,
-        .offset = (uint32_t)offsetof(Data_Route__storage_, id_p),
-        .flags = GPBFieldOptional,
+        .offset = (uint32_t)offsetof(Data_Route__storage_, routeId),
+        .flags = (GPBFieldFlags)(GPBFieldOptional | GPBFieldTextFormatNameCustom),
         .dataType = GPBDataTypeString,
       },
       {
@@ -166,7 +166,7 @@ typedef struct Data_Route__storage_ {
                                          flags:GPBDescriptorInitializationFlag_None];
 #if !GPBOBJC_SKIP_MESSAGE_TEXTFORMAT_EXTRAS
     static const char *extraTextFormatInfo =
-        "\003\002\r\000\003\010\000\004\006\000";
+        "\004\001\007\000\002\r\000\003\010\000\004\006\000";
     [localDescriptor setupExtraTextInfo:extraTextFormatInfo];
 #endif  // !GPBOBJC_SKIP_MESSAGE_TEXTFORMAT_EXTRAS
     [localDescriptor setupContainingMessageClassName:GPBStringifySymbol(Data)];

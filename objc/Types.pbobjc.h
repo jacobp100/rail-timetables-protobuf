@@ -64,7 +64,7 @@ typedef GPB_ENUM(Data_FieldNumber) {
 #pragma mark - Data_Route
 
 typedef GPB_ENUM(Data_Route_FieldNumber) {
-  Data_Route_FieldNumber_Id_p = 1,
+  Data_Route_FieldNumber_RouteId = 1,
   Data_Route_FieldNumber_OperatingDays = 2,
   Data_Route_FieldNumber_DateFrom = 3,
   Data_Route_FieldNumber_DateTo = 4,
@@ -73,7 +73,7 @@ typedef GPB_ENUM(Data_Route_FieldNumber) {
 
 @interface Data_Route : GPBMessage
 
-@property(nonatomic, readwrite, copy, null_resettable) NSString *id_p;
+@property(nonatomic, readwrite, copy, null_resettable) NSString *routeId;
 
 @property(nonatomic, readwrite) uint32_t operatingDays;
 

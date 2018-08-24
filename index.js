@@ -58,27 +58,27 @@ async function* parseCsv(dataStream) {
 
 async function* getTlaMap(dataStream) {
   const names = {};
-  for await (const [name, tla] of parseCsv(dataStream)) {
-    names[tla] = name;
+  for await (const [name, crc] of parseCsv(dataStream)) {
+    names[crc] = name;
   }
   return Object.keys(names)
     .sort()
-    .reduce((accum, tla, index) => {
-      accum[tla] = { id: index, tla, name: names[tla] };
+    .reduce((accum, crc, index) => {
+      accum[crc] = { id: index, crc, name: names[crc] };
       return accum;
     }, {});
 }
 
-async function* getStationIdMap(tlas, dataStream) {
+async function* getStationIdMap(crcs, dataStream) {
   let i = 0;
   const stations = {};
 
   for await (const line of chunksToLines(dataStream)) {
     if (line[0] === "A") {
-      const tla = line.slice(43, 46);
+      const crc = line.slice(43, 46);
 
-      if (tlas[tla]) {
-        const { id } = tlas[tla];
+      if (crcs[crc]) {
+        const { id } = crcs[crc];
         const toploc = line.slice(36, 43).trimRight();
 
         stations[toploc] = id;
@@ -109,6 +109,12 @@ const types = {
   BR: TYPE_BUS_REPLACEMENT
 };
 
+const reverseString = str =>
+  str
+    .split("")
+    .reverse()
+    .join("");
+
 const createRoute = line => {
   // const status = line.slice(79, 80).trimRight();
   const typeCode = line.slice(30, 32).trimRight();
@@ -118,8 +124,8 @@ const createRoute = line => {
     throw new Error(`Expected type for ${typeCode}`);
   }
 
-  const id = line.slice(3, 9);
-  const days = parseInt(line.slice(21, 28), 2);
+  const routeId = line.slice(3, 9);
+  const operatingDays = parseInt(reverseString(line.slice(21, 28)), 2);
 
   const dateFrom = encodeDate(
     2000 + Number(line.slice(9, 11)),
@@ -132,7 +138,7 @@ const createRoute = line => {
     Number(line.slice(19, 21))
   );
 
-  return { id, days, dateFrom, dateTo, stops: [] };
+  return { routeId, operatingDays, dateFrom, dateTo, stops: [] };
 };
 const createStop = (stations, line) => {
   const stationId = stations[line.slice(2, 9).trimRight()];
@@ -145,22 +151,22 @@ const createStop = (stations, line) => {
   switch (line[1]) {
     case "O":
     case "T":
-      arrival = encodeTime(
+      arrivalTime = encodeTime(
         Number(line.slice(15, 17)),
         Number(line.slice(17, 19))
       );
-      departure = arrival;
+      departureTime = arrivalTime;
       platform = line.slice(19, 22).trimRight();
       break;
     case "I": {
       const passTime = line.slice(20, 24).trimRight();
       if (passTime.length > 0) return null;
 
-      arrival = encodeTime(
+      arrivalTime = encodeTime(
         Number(line.slice(25, 27)),
         Number(line.slice(27, 29))
       );
-      departure = encodeTime(
+      departureTime = encodeTime(
         Number(line.slice(29, 31)),
         Number(line.slice(31, 33))
       );
@@ -171,7 +177,7 @@ const createStop = (stations, line) => {
       throw new Error("Unknown format");
   }
 
-  return { stationId, arrival, departure, platform };
+  return { stationId, arrivalTime, departureTime, platform };
 };
 const scheduleRe = /^BSN/;
 const scheduleChangedRe = /^BS[DR]/;
@@ -226,14 +232,14 @@ const loadProtoBuf = f =>
   });
 
 async function* run() {
-  const { value: tlaMap } = await getTlaMap(
+  const { value: crcMap } = await getTlaMap(
     fs.createReadStream(path.join(__dirname, "station_codes.csv"), {
       encoding: "utf-8"
     })
   ).next();
 
   const { value: stationMap } = await getStationIdMap(
-    tlaMap,
+    crcMap,
     fs.createReadStream(
       path.join(os.homedir(), "Downloads/ttis989/ttisf989.msn"),
       { encoding: "utf-8" }
@@ -253,7 +259,7 @@ async function* run() {
     routes.push(route);
   }
 
-  const stations = Object.values(sortBy(tlaMap, "index"));
+  const stations = Object.values(sortBy(crcMap, "index"));
   fs.writeFileSync(
     path.join(os.homedir(), "Downloads/ttis989/stations.json"),
     JSON.stringify(stations)
