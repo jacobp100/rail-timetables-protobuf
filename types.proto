@@ -10,7 +10,7 @@ message Data {
       string platform = 4;
     }
 
-    string routeId = 1;
+    uint32 routeId = 1;
     uint32 operatingDays = 2;
     uint32 dateFrom = 3;
     uint32 dateTo = 4;

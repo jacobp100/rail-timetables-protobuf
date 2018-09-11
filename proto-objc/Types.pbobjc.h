@@ -73,7 +73,7 @@ typedef GPB_ENUM(Data_Route_FieldNumber) {
 
 @interface Data_Route : GPBMessage
 
-@property(nonatomic, readwrite, copy, null_resettable) NSString *routeId;
+@property(nonatomic, readwrite) uint32_t routeId;
 
 @property(nonatomic, readwrite) uint32_t operatingDays;
 

@@ -3,7 +3,27 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const protobuf = require("protobufjs");
+const { flatbuffers } = require("flatbuffers");
+const sqlite3 = require("sqlite3");
 const { sortBy } = require("lodash");
+const FlatTypes = require("./flat-js/types_generated");
+
+const attempt = fn => {
+  try {
+    fn();
+  } catch (e) {}
+};
+
+const createIndexTable = () => {
+  const values = [];
+  const fn = value => {
+    let index = values.indexOf(value);
+    if (index === -1) index = values.push(value) - 1;
+    return index;
+  };
+  fn.getValues = () => values;
+  return fn;
+};
 
 const encodeTime = (h, m) => h * 60 + m;
 
@@ -115,6 +135,7 @@ const reverseString = str =>
     .reverse()
     .join("");
 
+const routesIndexTable = createIndexTable();
 const createRoute = line => {
   // const status = line.slice(79, 80).trimRight();
   const typeCode = line.slice(30, 32).trimRight();
@@ -124,7 +145,8 @@ const createRoute = line => {
     throw new Error(`Expected type for ${typeCode}`);
   }
 
-  const routeId = line.slice(3, 9);
+  const routeIdValue = line.slice(3, 9);
+  const routeId = routesIndexTable(routeIdValue);
   const operatingDays = parseInt(reverseString(line.slice(21, 28)), 2);
 
   const dateFrom = encodeDate(
@@ -231,6 +253,121 @@ const loadProtoBuf = f =>
     });
   });
 
+async function writeToProtobuf(routes) {
+  const message = { routes };
+  const root = await loadProtoBuf("types.proto");
+  const buffer = root
+    .lookupType("types.Data")
+    .encode(message)
+    .finish();
+
+  fs.writeFileSync(
+    path.join(os.homedir(), "Downloads/ttis989/ttisf989.pr"),
+    buffer
+  );
+}
+
+async function writeToFlatBuf(routes) {
+  const builder = new flatbuffers.Builder(0);
+
+  const routesData = routes.map(route => {
+    const stopsData = route.stops.map(stop => {
+      const platform = builder.createString(stop.platform);
+      FlatTypes.Stop.startStop(builder);
+      FlatTypes.Stop.addStationId(builder, stop.stationId);
+      FlatTypes.Stop.addArrivalTime(builder, stop.arrivalTime);
+      FlatTypes.Stop.addDepartureTime(builder, stop.departureTime);
+      FlatTypes.Stop.addPlatform(builder, platform);
+      return FlatTypes.Stop.endStop(builder);
+    });
+    const stopsVector = FlatTypes.Route.createStopsVector(builder, stopsData);
+
+    const routeId = builder.createString(route.routeId);
+    FlatTypes.Route.startRoute(builder);
+    FlatTypes.Route.addRouteId(builder, routeId);
+    FlatTypes.Route.addOperatingDays(builder, route.operatingDays);
+    FlatTypes.Route.addDateFrom(builder, route.dateFrom);
+    FlatTypes.Route.addDateTo(builder, route.dateTo);
+    FlatTypes.Route.addStops(builder, stopsVector);
+    return FlatTypes.Route.endRoute(builder);
+  });
+  const routesVector = FlatTypes.Root.createRoutesVector(builder, routesData);
+
+  FlatTypes.Root.startRoot(builder);
+  FlatTypes.Root.addRoutes(builder, routesVector);
+  const data = FlatTypes.Root.endRoot(builder);
+
+  FlatTypes.Root.finishRootBuffer(builder, data);
+
+  const buffer = builder.asUint8Array();
+
+  fs.writeFileSync(
+    path.join(os.homedir(), "Downloads/ttis989/ttisf989.fb"),
+    buffer
+  );
+}
+
+async function writeToSqlite(routes) {
+  const dbFilename = path.join(os.homedir(), "Downloads/ttis989/ttisf989.db");
+  attempt(() => fs.rmSync(dbFilename));
+
+  const db = new sqlite3.Database(dbFilename);
+
+  db.serialize(() => {
+    db.exec(`
+        DROP TABLE IF EXISTS route;
+        CREATE TABLE route(
+          atocId STRING,
+          routeId INTEGER PRIMARY KEY,
+          operatingDays INTEGER,
+          dateFrom INTEGER,
+          dateTo INTEGER
+        );
+
+        DROP TABLE IF EXISTS stop;
+        CREATE TABLE stop(
+          routeId INTEGER,
+          stationId INTEGER,
+          arrivalTime INTEGER,
+          departureTime INTEGER,
+          platform STRING,
+          FOREIGN KEY(routeId) REFERENCES route(routeId)
+        );
+      `);
+
+    const addRoute = db.prepare("INSERT INTO route VALUES (?, ?, ?, ?, ?)");
+    const addStop = db.prepare("INSERT INTO stop VALUES (?, ?, ?, ?, ?)");
+
+    db.parallelize(() => {
+      routes.forEach((route, routeId) => {
+        const atocId = route.routeId;
+        addRoute.run(
+          atocId,
+          routeId,
+          route.operatingDays,
+          route.dateFrom,
+          route.dateTo
+        );
+
+        route.stops.forEach(stop => {
+          addStop.run(
+            routeId,
+            stop.stationId,
+            stop.arrivalTime,
+            stop.departureTime,
+            stop.platform
+          );
+        });
+      });
+
+      addRoute.finalize();
+      addStop.finalize();
+    });
+  });
+
+  db.close();
+}
+
 async function* run() {
   const { value: crcMap } = await getTlaMap(
     fs.createReadStream(path.join(__dirname, "station_codes.csv"), {
@@ -265,17 +402,11 @@ async function* run() {
     JSON.stringify(stations)
   );
 
-  const message = { routes };
-  const root = await loadProtoBuf("types.proto");
-  const buffer = root
-    .lookupType("types.Data")
-    .encode(message)
-    .finish();
-
-  fs.writeFileSync(
-    path.join(os.homedir(), "Downloads/ttis989/ttisf989.pr"),
-    buffer
-  );
+  await Promise.all([
+    writeToProtobuf(routes),
+    writeToFlatBuf(routes)
+    // writeToSqlite(routes)
+  ]);
 }
 
 run().next();

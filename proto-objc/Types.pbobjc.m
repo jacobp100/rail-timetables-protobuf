@@ -97,10 +97,10 @@ typedef struct Data__storage_ {
 
 typedef struct Data_Route__storage_ {
   uint32_t _has_storage_[1];
+  uint32_t routeId;
   uint32_t operatingDays;
   uint32_t dateFrom;
   uint32_t dateTo;
-  NSString *routeId;
   NSMutableArray *stopsArray;
 } Data_Route__storage_;
 
@@ -117,7 +117,7 @@ typedef struct Data_Route__storage_ {
         .hasIndex = 0,
         .offset = (uint32_t)offsetof(Data_Route__storage_, routeId),
         .flags = (GPBFieldFlags)(GPBFieldOptional | GPBFieldTextFormatNameCustom),
-        .dataType = GPBDataTypeString,
+        .dataType = GPBDataTypeUInt32,
       },
       {
         .name = "operatingDays",

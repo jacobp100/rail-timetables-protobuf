@@ -11,20 +11,20 @@ const token = "d8e6b11e-b942-4941-b42e-f4b16d2c9239";
 let query = `
   <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:typ="http://thalesgroup.com/RTTI/2013-11-28/Token/types" xmlns:ldb="http://thalesgroup.com/RTTI/2016-02-16/ldb/">
     <soap:Header>
-        <typ:AccessToken>
-          <typ:TokenValue>${token}</typ:TokenValue>
-        </typ:AccessToken>
+      <typ:AccessToken>
+        <typ:TokenValue>${token}</typ:TokenValue>
+      </typ:AccessToken>
     </soap:Header>
     <soap:Body>
-        <ldb:GetNextDeparturesWithDetailsRequest>
-          <ldb:numRows>12</ldb:numRows>
-          <ldb:crs>WAT</ldb:crs>
-          <ldb:filterList>
-              <ldb:crs>SUR</ldb:crs>
-          </ldb:filterList>
-          <ldb:timeOffset>0</ldb:timeOffset>
-          <ldb:timeWindow>120</ldb:timeWindow>
-        </ldb:GetNextDeparturesWithDetailsRequest>
+      <ldb:GetNextDeparturesWithDetailsRequest>
+        <ldb:numRows>12</ldb:numRows>
+        <ldb:crs>WAT</ldb:crs>
+        <ldb:filterList>
+            <ldb:crs>SUR</ldb:crs>
+        </ldb:filterList>
+        <ldb:timeOffset>0</ldb:timeOffset>
+        <ldb:timeWindow>120</ldb:timeWindow>
+      </ldb:GetNextDeparturesWithDetailsRequest>
     </soap:Body>
   </soap:Envelope>
 `.trim();
@@ -32,19 +32,34 @@ let query = `
 query = `
   <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:typ="http://thalesgroup.com/RTTI/2013-11-28/Token/types" xmlns:ldb="http://thalesgroup.com/RTTI/2016-02-16/ldb/">
     <soap:Header>
-        <typ:AccessToken>
-          <typ:TokenValue>${token}</typ:TokenValue>
-        </typ:AccessToken>
+      <typ:AccessToken>
+        <typ:TokenValue>${token}</typ:TokenValue>
+      </typ:AccessToken>
     </soap:Header>
     <soap:Body>
-        <ldb:GetDepartureBoardRequest>
-          <ldb:numRows>12</ldb:numRows>
-          <ldb:crs>CHX</ldb:crs>
-          <ldb:filterCrs>HYS</ldb:filterCrs>
-          <ldb:filterType>to</ldb:filterType>
-          <ldb:timeOffset>0</ldb:timeOffset>
-          <ldb:timeWindow>120</ldb:timeWindow>
-        </ldb:GetDepartureBoardRequest>
+      <ldb:GetDepartureBoardRequest>
+        <ldb:numRows>12</ldb:numRows>
+        <ldb:crs>WAT</ldb:crs>
+        <ldb:filterCrs>SUR</ldb:filterCrs>
+        <ldb:filterType>to</ldb:filterType>
+        <ldb:timeOffset>0</ldb:timeOffset>
+        <ldb:timeWindow>120</ldb:timeWindow>
+      </ldb:GetDepartureBoardRequest>
+    </soap:Body>
+  </soap:Envelope>
+`.trim();
+
+const otherQuery = `
+  <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:typ="http://thalesgroup.com/RTTI/2013-11-28/Token/types" xmlns:ldb="http://thalesgroup.com/RTTI/2016-02-16/ldb/">
+    <soap:Header>
+      <typ:AccessToken>
+        <typ:TokenValue>${token}</typ:TokenValue>
+      </typ:AccessToken>
+    </soap:Header>
+    <soap:Body>
+      <ldb:GetServiceDetailsRequest>
+        <ldb:serviceID>+Svj67NDWkvbDK9Gt/1sFA==</ldb:serviceID>
+      </ldb:GetServiceDetailsRequest>
     </soap:Body>
   </soap:Envelope>
 `.trim();
@@ -125,3 +140,32 @@ axios("https://lite.realtime.nationalrail.co.uk/OpenLDBWS/ldb9.asmx", {
   })
   .then(console.log)
   .catch(console.error);
+
+const parseArrival = ({ "lt4:st": standardTime, "lt4:et": estimatedTime }) => {
+  if (estimatedTime === "On time") {
+    return { arrivalTime: getTime(standardTime) };
+  } else if (getTime(estimatedTime) != null) {
+    return { arrivalTime: getTime(estimatedTime) };
+  }
+  return null;
+};
+
+axios("https://lite.realtime.nationalrail.co.uk/OpenLDBWS/ldb9.asmx", {
+  method: "post",
+  headers: { "Content-Type": "text/xml" },
+  data: otherQuery
+})
+  .then(r => parser.parse(r.data))
+  .then(r => {
+    return r["soap:Envelope"]["soap:Body"].GetServiceDetailsResponse
+      .GetServiceDetailsResult;
+  })
+  .then(r => {
+    return r["lt4:subsequentCallingPoints"]["lt4:callingPointList"][
+      "lt4:callingPoint"
+    ];
+  })
+  .then(r => {
+    const arrival = parseArrival(r.find(r => r["lt4:crs"] === "SUR"));
+    console.log(arrival);
+  });

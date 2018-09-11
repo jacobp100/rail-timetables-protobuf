@@ -1,0 +1,20 @@
+table Stop {
+  stationId: uint16;
+  arrivalTime: uint16;
+  departureTime: uint16;
+  platform: string;
+}
+
+table Route {
+  routeId: uint16;
+  operatingDays: uint8;
+  dateFrom: uint16;
+  dateTo: uint16;
+  stops: [Stop];
+}
+
+table Root {
+  routes: [Route];
+}
+
+root_type Root;
