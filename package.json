@@ -8,7 +8,7 @@
     "start": "node index.js",
     "build:pr": "protoc --js_out=import_style=commonjs:./proto-js/ --objc_out=./proto-objc/ ./types.proto",
     "build:fb": "flatc --js -o ./flat-js ./types.fbs; flatc -c -o ./flat-c ./types.fbs",
-    "build": "npm run build:pr; npm run build:fb"
+    "build": "npm run build:pr"
   },
   "keywords": [],
   "author": "",
