@@ -1,4 +1,5 @@
 /* eslint-disable no-console, no-bitwise, no-restricted-syntax, require-yield, no-cond-assign, no-unused-vars, no-param-reassign, prefer-const */
+// If this fails, run node --max_old_space_size=6000 index.js
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -7,6 +8,9 @@ const { flatbuffers } = require("flatbuffers");
 const sqlite3 = require("sqlite3");
 const { sortBy } = require("lodash");
 const FlatTypes = require("./flat-js/types_generated");
+
+const ttis = "242";
+const dir = path.join(os.homedir(), "Downloads", `ttis${ttis}`);
 
 const attempt = fn => {
   try {
@@ -261,10 +265,7 @@ async function writeToProtobuf(routes) {
     .encode(message)
     .finish();
 
-  fs.writeFileSync(
-    path.join(os.homedir(), "Downloads/ttis989/ttisf989.pr"),
-    buffer
-  );
+  fs.writeFileSync(path.join(dir, `ttisf${ttis}.pr`), buffer);
 }
 
 async function writeToFlatBuf(routes) {
@@ -301,39 +302,36 @@ async function writeToFlatBuf(routes) {
 
   const buffer = builder.asUint8Array();
 
-  fs.writeFileSync(
-    path.join(os.homedir(), "Downloads/ttis989/ttisf989.fb"),
-    buffer
-  );
+  fs.writeFileSync(path.join(dir, `ttisf${ttis}.fb`), buffer);
 }
 
 async function writeToSqlite(routes) {
-  const dbFilename = path.join(os.homedir(), "Downloads/ttis989/ttisf989.db");
+  const dbFilename = path.join(dir, `ttisf${ttis}.db`);
   attempt(() => fs.rmSync(dbFilename));
 
   const db = new sqlite3.Database(dbFilename);
 
   db.serialize(() => {
     db.exec(`
-        DROP TABLE IF EXISTS route;
-        CREATE TABLE route(
-          atocId STRING,
-          routeId INTEGER PRIMARY KEY,
-          operatingDays INTEGER,
-          dateFrom INTEGER,
-          dateTo INTEGER
-        );
+      DROP TABLE IF EXISTS route;
+      CREATE TABLE route(
+        atocId STRING,
+        routeId INTEGER PRIMARY KEY,
+        operatingDays INTEGER,
+        dateFrom INTEGER,
+        dateTo INTEGER
+      );
 
-        DROP TABLE IF EXISTS stop;
-        CREATE TABLE stop(
-          routeId INTEGER,
-          stationId INTEGER,
-          arrivalTime INTEGER,
-          departureTime INTEGER,
-          platform STRING,
-          FOREIGN KEY(routeId) REFERENCES route(routeId)
-        );
-      `);
+      DROP TABLE IF EXISTS stop;
+      CREATE TABLE stop(
+        routeId INTEGER,
+        stationId INTEGER,
+        arrivalTime INTEGER,
+        departureTime INTEGER,
+        platform STRING,
+        FOREIGN KEY(routeId) REFERENCES route(routeId)
+      );
+    `);
 
     const addRoute = db.prepare("INSERT INTO route VALUES (?, ?, ?, ?, ?)");
     const addStop = db.prepare("INSERT INTO stop VALUES (?, ?, ?, ?, ?)");
@@ -377,18 +375,16 @@ async function* run() {
 
   const { value: stationMap } = await getStationIdMap(
     crcMap,
-    fs.createReadStream(
-      path.join(os.homedir(), "Downloads/ttis989/ttisf989.msn"),
-      { encoding: "utf-8" }
-    )
+    fs.createReadStream(path.join(dir, `ttisf${ttis}.msn`), {
+      encoding: "utf-8"
+    })
   ).next();
 
   const schedule = getRoutes(
     stationMap,
-    fs.createReadStream(
-      path.join(os.homedir(), "Downloads/ttis989/ttisf989.mca"),
-      { encoding: "utf-8" }
-    )
+    fs.createReadStream(path.join(dir, `ttisf${ttis}.mca`), {
+      encoding: "utf-8"
+    })
   );
 
   let routes = [];
@@ -397,14 +393,11 @@ async function* run() {
   }
 
   const stations = Object.values(sortBy(crcMap, "index"));
-  fs.writeFileSync(
-    path.join(os.homedir(), "Downloads/ttis989/stations.json"),
-    JSON.stringify(stations)
-  );
+  fs.writeFileSync(path.join(dir, "/stations.json"), JSON.stringify(stations));
 
   await Promise.all([
-    writeToProtobuf(routes),
-    writeToFlatBuf(routes)
+    writeToProtobuf(routes)
+    // writeToFlatBuf(routes)
     // writeToSqlite(routes)
   ]);
 }
