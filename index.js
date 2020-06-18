@@ -9,7 +9,7 @@ const sqlite3 = require("sqlite3");
 const { sortBy } = require("lodash");
 const FlatTypes = require("./flat-js/types_generated");
 
-const ttis = "242";
+const ttis = process.argv[2] || "515";
 const dir = path.join(os.homedir(), "Downloads", `ttis${ttis}`);
 
 const attempt = fn => {
