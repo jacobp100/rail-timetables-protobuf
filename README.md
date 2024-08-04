@@ -4,7 +4,7 @@ A bunch of trials to compress offline rail timetables as much as possible. I'm p
 
 Sign into [ATOC](https://data.atoc.org/how-to), go to 'Data Download', and download the 'Timetable Feed'. The only important file is the mca file.
 
-The workflow was download the file, drop it in the Downloads folder (the default save location), then run `npm run build xxx` where xxx is the timetable number.
+The workflow was download the file, drop it in the Downloads folder (the default save location), then run `npm run build ttisXXX` where xxx is the timetable number.
 
 It would then generate a `ttisXXX.proto` file in the same directory.
 
