@@ -2,7 +2,7 @@
 
 A bunch of trials to compress offline rail timetables as much as possible. I'm pretty sure the Protobuf ObjC is what was ulitmately used.
 
-I don't remember exactly where I got the data from, but I can tell you the last timetable added had the filename ttisf515.mca. It was a text file, and weighed in st about 300mb from memory.
+Sign into [ATOC](https://data.atoc.org/how-to), go to 'Data Download', and download the 'Timetable Feed'. The only important file is the mca file.
 
 The workflow was download the file, drop it in the Downloads folder (the default save location), then run `npm run build xxx` where xxx is the timetable number.
 
