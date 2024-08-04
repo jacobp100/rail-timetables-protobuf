@@ -4,15 +4,15 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const protobuf = require("protobufjs");
-const { flatbuffers } = require("flatbuffers");
-const sqlite3 = require("sqlite3");
+// const { flatbuffers } = require("flatbuffers");
+// const sqlite3 = require("sqlite3");
 const { sortBy } = require("lodash");
 const FlatTypes = require("./flat-js/types_generated");
 
 const ttis = process.argv[2] || "515";
 const dir = path.join(os.homedir(), "Downloads", `ttis${ttis}`);
 
-const attempt = fn => {
+const attempt = (fn) => {
   try {
     fn();
   } catch (e) {}
@@ -20,7 +20,7 @@ const attempt = fn => {
 
 const createIndexTable = () => {
   const values = [];
-  const fn = value => {
+  const fn = (value) => {
     let index = values.indexOf(value);
     if (index === -1) index = values.push(value) - 1;
     return index;
@@ -31,7 +31,7 @@ const createIndexTable = () => {
 
 const encodeTime = (h, m) => h * 60 + m;
 
-const formatTime = value => {
+const formatTime = (value) => {
   const h = Math.floor(value / 60);
   const m = value % 60;
   return `${h}:${String(m).padStart(2, "0")}`;
@@ -41,13 +41,13 @@ const day = 24 * 60 * 60 * 1000;
 const encodeDate = (y, m, d) =>
   Math.round((Date.UTC(y, m - 1, d) - Date.UTC(2018, 0, 1)) / day);
 
-const encodeRouteId = id => {
+const encodeRouteId = (id) => {
   const charIndex = id[0].toLowerCase().charCodeAt(0) - "a".charCodeAt(0);
   const num = Number(id.slice(1));
   return ((charIndex & 0b11111) << 17) | (num & 0b11111111111111111);
 };
 
-const formatId = value => {
+const formatId = (value) => {
   const char = String.fromCharCode(
     ((value >> 17) & 0b11111) + "a".charCodeAt(0)
   ).toUpperCase();
@@ -72,7 +72,8 @@ async function* chunksToLines(chunksAsync) {
   }
 }
 
-const csvLineRe = /^(?:("(?:[^"\n]|\\")*"|[^,\n]*),)*("(?:[^"\n]|\\")*"|[^,\n]*)$/;
+const csvLineRe =
+  /^(?:("(?:[^"\n]|\\")*"|[^,\n]*),)*("(?:[^"\n]|\\")*"|[^,\n]*)$/;
 async function* parseCsv(dataStream) {
   for await (const line of chunksToLines(dataStream)) {
     const [, /* initial */ ...matches] = line.slice(0, -1).match(csvLineRe);
@@ -130,17 +131,13 @@ const types = {
   XX: TYPE_NORMAL,
   XZ: TYPE_NORMAL,
   BS: TYPE_BUS_REPLACEMENT,
-  BR: TYPE_BUS_REPLACEMENT
+  BR: TYPE_BUS_REPLACEMENT,
 };
 
-const reverseString = str =>
-  str
-    .split("")
-    .reverse()
-    .join("");
+const reverseString = (str) => str.split("").reverse().join("");
 
 const routesIndexTable = createIndexTable();
-const createRoute = line => {
+const createRoute = (line) => {
   // const status = line.slice(79, 80).trimRight();
   const typeCode = line.slice(30, 32).trimRight();
   const type = types[typeCode];
@@ -246,7 +243,7 @@ async function* getRoutes(stationMap, dataStream) {
   }
 }
 
-const loadProtoBuf = f =>
+const loadProtoBuf = (f) =>
   new Promise((res, rej) => {
     protobuf.load("types.proto", (err, root) => {
       if (err) {
@@ -260,10 +257,7 @@ const loadProtoBuf = f =>
 async function writeToProtobuf(routes) {
   const message = { routes };
   const root = await loadProtoBuf("types.proto");
-  const buffer = root
-    .lookupType("types.Data")
-    .encode(message)
-    .finish();
+  const buffer = root.lookupType("types.Data").encode(message).finish();
 
   fs.writeFileSync(path.join(dir, `ttisf${ttis}.pr`), buffer);
 }
@@ -271,8 +265,8 @@ async function writeToProtobuf(routes) {
 async function writeToFlatBuf(routes) {
   const builder = new flatbuffers.Builder(0);
 
-  const routesData = routes.map(route => {
-    const stopsData = route.stops.map(stop => {
+  const routesData = routes.map((route) => {
+    const stopsData = route.stops.map((stop) => {
       const platform = builder.createString(stop.platform);
       FlatTypes.Stop.startStop(builder);
       FlatTypes.Stop.addStationId(builder, stop.stationId);
@@ -347,7 +341,7 @@ async function writeToSqlite(routes) {
           route.dateTo
         );
 
-        route.stops.forEach(stop => {
+        route.stops.forEach((stop) => {
           addStop.run(
             routeId,
             stop.stationId,
@@ -369,21 +363,21 @@ async function writeToSqlite(routes) {
 async function* run() {
   const { value: crcMap } = await getTlaMap(
     fs.createReadStream(path.join(__dirname, "station_codes.csv"), {
-      encoding: "utf-8"
+      encoding: "utf-8",
     })
   ).next();
 
   const { value: stationMap } = await getStationIdMap(
     crcMap,
     fs.createReadStream(path.join(dir, `ttisf${ttis}.msn`), {
-      encoding: "utf-8"
+      encoding: "utf-8",
     })
   ).next();
 
   const schedule = getRoutes(
     stationMap,
     fs.createReadStream(path.join(dir, `ttisf${ttis}.mca`), {
-      encoding: "utf-8"
+      encoding: "utf-8",
     })
   );
 
@@ -396,7 +390,7 @@ async function* run() {
   fs.writeFileSync(path.join(dir, "/stations.json"), JSON.stringify(stations));
 
   await Promise.all([
-    writeToProtobuf(routes)
+    writeToProtobuf(routes),
     // writeToFlatBuf(routes)
     // writeToSqlite(routes)
   ]);
